@@ -1,7 +1,14 @@
 import { _decorator, Component, Node, Label, Button, Prefab, Sprite, tween, Vec3, instantiate } from 'cc';
+import { Api } from '../Config/Api';
+import { Toast } from '../Common/Toast';
+import { AudioManager } from '../Manager/AudioManager';
+import { GameStateManager } from '../Manager/GameStateManager';
+import { MapRoot } from './MapRoot';
+import { UiHeadbar } from './UiHeadbar';
+import { formatAmount } from '../Utils/Format';
 const { ccclass, property } = _decorator;
 
-const TAB_VALUES = [10, 30, 50, 100, 200, 500, 1000, 10000];
+const DEFAULT_TAB_VALUES = [10, 30, 50, 100, 200, 500, 1000, 10000];
 
 @ccclass('Picker')
 export class Picker extends Component {
@@ -19,11 +26,14 @@ export class Picker extends Component {
 
     private selectedValue = 10;
     private isPopOpen = false;
+    private tabValues: number[] = [...DEFAULT_TAB_VALUES];
 
     onLoad() {
-        this.countLabel.string = this.selectedValue.toString();
+        this.countLabel.string = formatAmount(this.selectedValue);
         this.pickerPop.setScale(1, 0, 1);
-        this.initTabs();
+        this.initTabs().catch((err) => {
+            console.error('[Picker] 初始化下注金额失败:', err);
+        });
         this.node.on(Node.EventType.TOUCH_END, this.togglePop, this);
     }
 
@@ -31,13 +41,22 @@ export class Picker extends Component {
         this.node.off(Node.EventType.TOUCH_END, this.togglePop, this);
     }
 
-    private initTabs() {
-        for (const value of TAB_VALUES) {
+    private async initTabs() {
+        await this.loadTabValues();
+        this.contentNode.removeAllChildren();
+
+        for (const value of this.tabValues) {
             const tab = instantiate(this.tabPrefab);
-            tab.getComponentInChildren(Label)!.string = value.toString();
+            tab.getComponentInChildren(Label)!.string = formatAmount(value);
             this.contentNode.addChild(tab);
             tab.on(Button.EventType.CLICK, () => this.onTabClick(value));
         }
+
+        if (this.tabValues.indexOf(this.selectedValue) < 0) {
+            this.selectedValue = this.tabValues[0] ?? 0;
+            this.countLabel.string = formatAmount(this.selectedValue);
+        }
+
         this.scheduleOnce(() => {
             this.updateTabStates();
             this.pickerPop.active = false;
@@ -49,7 +68,7 @@ export class Picker extends Component {
 
         this.selectedValue = value;
         this.updateTabStates();
-        this.countLabel.string = value.toString();
+        this.countLabel.string = formatAmount(value);
         this.scheduleOnce(() => this.closePop(), 0.3);
     }
 
@@ -57,12 +76,24 @@ export class Picker extends Component {
         const children = this.contentNode.children;
         for (let i = 0; i < children.length; i++) {
             const btn = children[i].getComponent(Button)!;
-            const selected = TAB_VALUES[i] === this.selectedValue;
+            const selected = this.tabValues[i] === this.selectedValue;
             btn.interactable = !selected;
             const sprite = btn.target.getComponent(Sprite);
             if (sprite) {
                 sprite.spriteFrame = selected ? btn.disabledSprite : btn.normalSprite;
             }
+        }
+    }
+
+    private async loadTabValues() {
+        try {
+            const values = await Api.battleBetAmount();
+            if (Array.isArray(values) && values.length > 0) {
+                this.tabValues = values;
+            }
+        } catch (e) {
+            console.warn('[Picker] 获取可用下注金额失败，使用默认配置', e);
+            this.tabValues = [...DEFAULT_TAB_VALUES];
         }
     }
 
@@ -92,5 +123,32 @@ export class Picker extends Component {
             .to(0.15, { scale: new Vec3(1, 0, 1) })
             .call(() => { this.pickerPop.active = false; })
             .start();
+    }
+
+    public async submitBet() {
+        const roomId = MapRoot.instance?.getSelfSelectedRoomId() ?? 0;
+        if (roomId < 1 || roomId > 8) {
+            Toast.showFail('请先选择房间');
+            return;
+        }
+
+        const gameId = GameStateManager.instance.currentGameId;
+        if (!gameId) {
+            Toast.showFail('未获取到当前期数');
+            return;
+        }
+
+        try {
+            await Api.battleJoin({
+                game_id: gameId,
+                room_id: roomId,
+                amount: this.selectedValue,
+            });
+            AudioManager.instance?.playCoinOnce();
+            Toast.showSuccess('投入成功');
+            UiHeadbar.instance?.decreaseStoneBalance(this.selectedValue);
+        } catch (e) {
+            console.error('[Picker] 投入失败:', e);
+        }
     }
 }

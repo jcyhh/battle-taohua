@@ -22,3 +22,9 @@ node_modules/
 # WebStorm
 #//////////////////////////
 .idea/
+
+#//////////////////////////
+# Dev Config
+#//////////////////////////
+assets/Script/Config/DevConfig.ts
+assets/Script/Config/DevConfig.ts.meta
