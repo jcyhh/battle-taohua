@@ -30,6 +30,7 @@ export class RecordStats extends Component {
     private readonly roomCountLabels: Array<Label | null> = [];
     private readonly latestRoomLabels: Array<Label | null> = [];
     private readonly latestGameLabels: Array<Label | null> = [];
+    private readonly latestRecordItems: Array<Node | null> = [];
     private payoutLabel: Label | null = null;
     private bonusLabel: Label | null = null;
     private scrollView: ScrollView | null = null;
@@ -81,13 +82,16 @@ export class RecordStats extends Component {
     private bindRoomRecordLabels() {
         this.latestRoomLabels.length = 0;
         this.latestGameLabels.length = 0;
+        this.latestRecordItems.length = 0;
         const record10Node = this.findNodeByName(director.getScene(), 'record10');
         for (let i = 1; i <= 10; i++) {
+            const cardTagNode = record10Node?.getChildByPath(`cardTags/cardTag${i}`) ?? null;
+            this.latestRecordItems.push(cardTagNode);
             this.latestRoomLabels.push(
-                record10Node?.getChildByPath(`cardTags/cardTag${i}/count`)?.getComponent(Label) ?? null,
+                cardTagNode?.getChildByPath('count')?.getComponent(Label) ?? null,
             );
             this.latestGameLabels.push(
-                record10Node?.getChildByPath(`cardTags/cardTag${i}/roomname`)?.getComponent(Label) ?? null,
+                cardTagNode?.getChildByPath('roomname')?.getComponent(Label) ?? null,
             );
         }
     }
@@ -112,8 +116,17 @@ export class RecordStats extends Component {
     private renderRoomRecord(roomRecord: Array<{ game_id: number; killer_room: number }>) {
         for (let i = 0; i < 10; i++) {
             const record = roomRecord?.[i];
+            const itemNode = this.latestRecordItems[i];
             const roomLabel = this.latestRoomLabels[i];
             const gameLabel = this.latestGameLabels[i];
+
+            if (itemNode) {
+                itemNode.active = !!record;
+            }
+
+            if (!record) {
+                continue;
+            }
 
             if (roomLabel) {
                 roomLabel.string = getRoomNameById(Number(record?.killer_room));

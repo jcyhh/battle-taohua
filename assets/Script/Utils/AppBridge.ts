@@ -1,8 +1,6 @@
-import { PREVIEW } from 'cc/env';
 import { Request } from './Request';
 import { Socket } from './Socket';
 import { Storage } from './Storage';
-import { DevConfig } from '../Config/DevConfig';
 
 interface AppParams {
     apiUrl: string;
@@ -15,32 +13,30 @@ export class AppBridge {
     private static _params: AppParams | null = null;
     private static readonly TOKEN_STORAGE_KEY = 'token';
 
-    static init(): AppParams {
-        const params = PREVIEW ? this._devParams() : this._parseUrlParams();
+    static async init(): Promise<AppParams> {
+        const params = this._parseUrlParams();
         const cachedToken = Storage.getString(this.TOKEN_STORAGE_KEY, '');
         params.token = cachedToken || params.token;
         this._params = params;
 
-        console.log(`[AppBridge] 环境: ${PREVIEW ? 'DEV' : 'PROD'}`);
-        console.log('[AppBridge] 参数:', JSON.stringify(params));
+        console.log('[AppBridge] 获取到的参数:', params);
 
         if (params.apiUrl) {
             Request.instance.init(params.apiUrl);
-            console.log(`[AppBridge] Request 已初始化: ${params.apiUrl}`);
         } else {
             console.warn('[AppBridge] 未收到 apiUrl，Request 未初始化');
         }
 
         if (params.token) {
             Request.instance.token = params.token;
-            console.log('[AppBridge] Token 已设置');
         }
 
         if (params.wsUrl) {
-            Socket.instance.connect({ url: params.wsUrl, token: params.token });
-            console.log(`[AppBridge] Socket 正在连接: ${params.wsUrl}`);
+            if (!Socket.instance.connected) {
+                Socket.instance.connect({ url: params.wsUrl, token: params.token });
+            }
         } else {
-            console.warn('[AppBridge] 未收到 wsUrl，Socket 未连接');
+            console.warn('[AppBridge] 未收到 wsUrl，Socket 未初始化');
         }
 
         return params;
@@ -48,7 +44,7 @@ export class AppBridge {
 
     static get params(): AppParams {
         if (!this._params) {
-            this._params = PREVIEW ? this._devParams() : this._parseUrlParams();
+            this._params = this._parseUrlParams();
         }
         return this._params;
     }
@@ -57,29 +53,55 @@ export class AppBridge {
         return this.params[key] ?? defaultValue;
     }
 
-    private static _devParams(): AppParams {
-        return { ...DevConfig } as AppParams;
+    static postMessage(type: string, data?: string) {
+        console.log(`?type=${type}&data=${data}`);
+        
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const { Flutter } = window as any;
+        if (!Flutter) {
+            return;
+        }
+
+        let url = `?type=${type}`;
+        if (data) {
+            url += `&data=${data}`;
+        }
+        console.log(url);
+        Flutter.postMessage(url);
     }
 
     private static _parseUrlParams(): AppParams {
         const result: AppParams = { apiUrl: '', wsUrl: '', token: '' };
 
         try {
-            const search = window.location.search;
-            if (!search || search.length <= 1) return result;
+            const search = typeof window !== 'undefined' ? window.location.search : '';
+            const hash = typeof window !== 'undefined' ? window.location.hash : '';
+            this.applyQueryString(result, search);
 
-            const pairs = search.substring(1).split('&');
-            for (const pair of pairs) {
-                const eqIndex = pair.indexOf('=');
-                if (eqIndex < 0) continue;
-                const key = decodeURIComponent(pair.substring(0, eqIndex));
-                const value = decodeURIComponent(pair.substring(eqIndex + 1));
-                result[key] = value;
+            const hashQueryIndex = hash.indexOf('?');
+            if (hashQueryIndex >= 0) {
+                this.applyQueryString(result, hash.substring(hashQueryIndex));
             }
         } catch (e) {
             console.error('[AppBridge] URL 参数解析失败:', e);
         }
 
         return result;
+    }
+
+    private static applyQueryString(target: AppParams, query: string) {
+        if (!query || query.length <= 1) return;
+
+        const pairs = query.replace(/^[?#]/, '').split('&');
+        for (const pair of pairs) {
+            const eqIndex = pair.indexOf('=');
+            if (eqIndex < 0) continue;
+            const key = decodeURIComponent(pair.substring(0, eqIndex));
+            const value = decodeURIComponent(pair.substring(eqIndex + 1));
+            target[key] = value;
+        }
     }
 }

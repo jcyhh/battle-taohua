@@ -65,6 +65,10 @@ export class UiHeadbar extends Component {
         GameStateManager.instance.offDtsDataChanged(this.onDtsDataChanged);
     }
 
+    onQuit() {
+        AppBridge.postMessage('navBack', '')
+    }
+
     async fetchBattleInit() {
         try {
             const data = await Api.battleInit();
