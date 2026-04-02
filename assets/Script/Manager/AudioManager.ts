@@ -1,4 +1,4 @@
-import { _decorator, Component, AudioClip, AudioSource } from 'cc';
+import { _decorator, AudioClip, AudioSource, Component, Director, director, resources } from 'cc';
 import { Storage } from '../Utils/Storage';
 
 const { ccclass, property } = _decorator;
@@ -6,34 +6,31 @@ const { ccclass, property } = _decorator;
 const BGM_KEY = 'bgmOn';
 const SFX_KEY = 'sfxOn';
 
+const AUDIO_PATHS = {
+    bgm: 'Audio/bgm',
+    click: 'Audio/play',
+    countdown: 'Audio/countdown',
+    attack: 'Audio/attack',
+    roomSelect: 'Audio/chooseRoom',
+    coin: 'Audio/gold',
+    settlement: 'Audio/win',
+} as const;
+
 @ccclass('AudioManager')
 export class AudioManager extends Component {
-    @property({ type: AudioClip, tooltip: '点击音效' })
-    clickClip: AudioClip | null = null;
-
-    @property({ type: AudioClip, tooltip: '倒计时音效' })
-    countdownClip: AudioClip | null = null;
-
-    @property({ type: AudioClip, tooltip: '攻击音效' })
-    attackClip: AudioClip | null = null;
-
-    @property({ type: AudioClip, tooltip: '选择房间音效' })
-    roomSelectClip: AudioClip | null = null;
-
-    @property({ type: AudioClip, tooltip: '金币音效' })
-    coinClip: AudioClip | null = null;
-
-    @property({ type: AudioClip, tooltip: '结算音效' })
-    settlementClip: AudioClip | null = null;
-
-    @property({ type: AudioSource, tooltip: '背景音乐 AudioSource(Play On Awake)' })
-    bgmSource: AudioSource | null = null;
-
     @property({ tooltip: '音效音量' })
     sfxVolume = 1.0;
 
+    private bgmSource: AudioSource | null = null;
     private sfxSource: AudioSource | null = null;
-    private loopSfxSource: AudioSource | null = null;
+    private bgmClip: AudioClip | null = null;
+    private clickClip: AudioClip | null = null;
+    private countdownClip: AudioClip | null = null;
+    private attackClip: AudioClip | null = null;
+    private roomSelectClip: AudioClip | null = null;
+    private coinClip: AudioClip | null = null;
+    private settlementClip: AudioClip | null = null;
+    private preloadPromise: Promise<void> | null = null;
 
     private static _instance: AudioManager | null = null;
     static get instance(): AudioManager | null {
@@ -46,27 +43,48 @@ export class AudioManager extends Component {
             return;
         }
         AudioManager._instance = this;
+        director.addPersistRootNode(this.node);
 
-        this.sfxSource = this.node.addComponent(AudioSource);
-        this.loopSfxSource = this.node.addComponent(AudioSource);
-        this.loopSfxSource.loop = true;
-        this.initBgm();
+        const sources = this.getComponents(AudioSource);
+        this.bgmSource = sources[0] ?? this.node.addComponent(AudioSource);
+        this.sfxSource = sources[1] ?? this.node.addComponent(AudioSource);
+        this.bgmSource.playOnAwake = false;
+        this.bgmSource.loop = true;
+
+        director.on(Director.EVENT_AFTER_SCENE_LAUNCH, this.ensureBgmPlayback, this);
+        void this.preloadAudioAssets();
     }
 
     onDestroy() {
         if (AudioManager._instance === this) {
             AudioManager._instance = null;
         }
+        director.off(Director.EVENT_AFTER_SCENE_LAUNCH, this.ensureBgmPlayback, this);
     }
 
-    private initBgm() {
-        if (!this.bgmSource) return;
-
-        if (!Storage.getBool(BGM_KEY, true)) {
-            this.scheduleOnce(() => {
-                this.bgmSource?.stop();
-            }, 0);
+    preloadAudioAssets() {
+        if (this.preloadPromise) {
+            return this.preloadPromise;
         }
+
+        this.preloadPromise = Promise.all([
+            this.loadClip(AUDIO_PATHS.bgm).then((clip) => { this.bgmClip = clip; }),
+            this.loadClip(AUDIO_PATHS.click).then((clip) => { this.clickClip = clip; }),
+            this.loadClip(AUDIO_PATHS.countdown).then((clip) => { this.countdownClip = clip; }),
+            this.loadClip(AUDIO_PATHS.attack).then((clip) => { this.attackClip = clip; }),
+            this.loadClip(AUDIO_PATHS.roomSelect).then((clip) => { this.roomSelectClip = clip; }),
+            this.loadClip(AUDIO_PATHS.coin).then((clip) => { this.coinClip = clip; }),
+            this.loadClip(AUDIO_PATHS.settlement).then((clip) => { this.settlementClip = clip; }),
+        ]).then(() => {
+            if (this.bgmSource && this.bgmClip) {
+                this.bgmSource.clip = this.bgmClip;
+            }
+            this.ensureBgmPlayback();
+        }).catch((error) => {
+            console.error('[AudioManager] 音频异步加载失败:', error);
+        });
+
+        return this.preloadPromise;
     }
 
     playClick() {
@@ -131,20 +149,24 @@ export class AudioManager extends Component {
         return 0.25;
     }
 
-    startCoinLoop() {
-        if (!this.loopSfxSource || !this.coinClip) return;
-        if (!Storage.getBool(SFX_KEY, true)) return;
-        if (this.loopSfxSource.playing && this.loopSfxSource.clip === this.coinClip) return;
-        this.loopSfxSource.stop();
-        this.loopSfxSource.clip = this.coinClip;
-        this.loopSfxSource.volume = this.sfxVolume;
-        this.loopSfxSource.loop = true;
-        this.loopSfxSource.play();
-    }
+    ensureBgmPlayback() {
+        if (!this.bgmSource) return;
+        if (!this.bgmClip) {
+            void this.preloadAudioAssets();
+            return;
+        }
 
-    stopCoinLoop() {
-        if (!this.loopSfxSource) return;
-        this.loopSfxSource.stop();
+        if (!Storage.getBool(BGM_KEY, true)) {
+            this.bgmSource.pause();
+            return;
+        }
+
+        if (this.bgmSource.clip !== this.bgmClip) {
+            this.bgmSource.clip = this.bgmClip;
+        }
+        if (!this.bgmSource.playing) {
+            this.bgmSource.play();
+        }
     }
 
     setBgmOn(isOn: boolean) {
@@ -152,18 +174,14 @@ export class AudioManager extends Component {
         if (!this.bgmSource) return;
 
         if (isOn) {
-            this.bgmSource.stop();
-            this.bgmSource.play();
+            this.ensureBgmPlayback();
         } else {
-            this.bgmSource.stop();
+            this.bgmSource.pause();
         }
     }
 
     setSfxOn(isOn: boolean) {
         Storage.setBool(SFX_KEY, isOn);
-        if (!isOn) {
-            this.stopCoinLoop();
-        }
     }
 
     get isBgmOn(): boolean {
@@ -172,5 +190,17 @@ export class AudioManager extends Component {
 
     get isSfxOn(): boolean {
         return Storage.getBool(SFX_KEY, true);
+    }
+
+    private loadClip(path: string): Promise<AudioClip> {
+        return new Promise((resolve, reject) => {
+            resources.load(path, AudioClip, (error, clip) => {
+                if (error || !clip) {
+                    reject(error ?? new Error(`音频加载失败: ${path}`));
+                    return;
+                }
+                resolve(clip);
+            });
+        });
     }
 }

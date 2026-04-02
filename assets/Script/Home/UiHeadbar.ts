@@ -1,5 +1,6 @@
 import { _decorator, Component, Label, tween, Tween, Vec3 } from 'cc';
 import { Api } from '../Config/Api';
+import { t } from '../Config/I18n';
 import { AudioManager } from '../Manager/AudioManager';
 import { AppBridge } from '../Utils/AppBridge';
 import { GamePhase, GameStateManager } from '../Manager/GameStateManager';
@@ -11,12 +12,11 @@ const { ccclass, property } = _decorator;
 export class UiHeadbar extends Component {
     static instance: UiHeadbar | null = null;
 
-
     @property(Label)
     labelPeach: Label = null!;
 
     @property(Label)
-    labelHolyWater: Label = null!;
+    labelWater: Label = null!;
 
     @property(Label)
     labelStone: Label = null!;
@@ -71,10 +71,15 @@ export class UiHeadbar extends Component {
 
     async fetchBattleInit() {
         try {
-            const data = await Api.battleInit();
+            const [battleData, userData] = await Promise.all([
+                Api.battleInit(),
+                Api.userMy(),
+            ]);
+            const data = battleData;
             GameStateManager.instance.setInitialGameId(data.game_id);
             GameStateManager.instance.setSelfUserId(data.user_id);
             this.setStoneBalance(data.balance);
+            this.setWaterBalance(userData?.balance_spring_water);
             this.updateBoardTitle(data.game_id);
         } catch (e) {
             console.error('[UiHeadbar] 获取初始化信息失败:', e);
@@ -83,7 +88,11 @@ export class UiHeadbar extends Component {
 
     private bindLabels() {
         this.labelPeach = this.findLabel('asset/assetPeach/Label', this.labelPeach);
-        this.labelHolyWater = this.findLabel('asset/assetHolyWater/Label', this.labelHolyWater);
+        this.labelWater = this.findNodeLabel([
+            'asset/assetWater/Label',
+            'asset/assetHolyWater/Label',
+            'asset/assetPeach/Label',
+        ], this.labelWater);
         this.labelStone = this.findLabel('asset/assetStone/Label', this.labelStone);
         this.boardTitleLabel = this.findNodeLabel(['board/title', 'board/number'], this.boardTitleLabel);
         this.boardMsgLabel = this.findNodeLabel(['board/msg'], this.boardMsgLabel);
@@ -119,7 +128,11 @@ export class UiHeadbar extends Component {
         const currentGameId = Number(gameId);
         const joinPeople = dtsData && dtsGameId === currentGameId ? this.normalizeCount(dtsData.join_people) : 0;
         const maxPeople = dtsData && dtsGameId === currentGameId ? this.normalizeCount(dtsData.max_people) : 0;
-        this.setBoardTitle(`第${currentGameId}期（${joinPeople}/${maxPeople}）`);
+        this.setBoardTitle(t('第{gameId}期（{joinPeople}/{maxPeople}）', {
+            gameId: currentGameId,
+            joinPeople,
+            maxPeople,
+        }));
     }
 
     private updateBoardTitleByDtsData(dtsData: { join_people?: number | string; max_people?: number | string; game_id?: number | string }) {
@@ -128,7 +141,11 @@ export class UiHeadbar extends Component {
 
         const joinPeople = this.normalizeCount(dtsData.join_people);
         const maxPeople = this.normalizeCount(dtsData.max_people);
-        this.setBoardTitle(`第${gameId}期（${joinPeople}/${maxPeople}）`);
+        this.setBoardTitle(t('第{gameId}期（{joinPeople}/{maxPeople}）', {
+            gameId,
+            joinPeople,
+            maxPeople,
+        }));
     }
 
     private updateBoardMessageByDtsData(
@@ -136,32 +153,32 @@ export class UiHeadbar extends Component {
         currentPhase: GamePhase,
     ) {
         if (GameStateManager.instance.skipCurrentRoundVisuals) {
-            this.setBoardMessage('下局即将开始');
+            this.setBoardMessage(t('下局即将开始'));
             return;
         }
 
         if (currentPhase === GamePhase.Gathering) {
             const preKillerRoom = this.normalizeCount(dtsData.pre_killer_room);
             if (preKillerRoom === 0) {
-                this.setBoardMessage('即将开局');
+                this.setBoardMessage(t('即将开局'));
                 return;
             }
 
             const roomName = getRoomNameById(preKillerRoom);
-            this.setBoardMessage(`上期杀手去了${roomName}`);
+            this.setBoardMessage(t('上期杀手去了{roomName}', { roomName }));
             return;
         }
 
         if (currentPhase === GamePhase.Starting) {
             const timer = this.normalizeCount(dtsData.timer);
             const displayTimer = timer <= 0 ? 1 : timer;
-            this.setBoardMessage(`${displayTimer}秒后杀手出现`);
+            this.setBoardMessage(t('{displayTimer}秒后杀手出现', { displayTimer }));
             this.tryPlayCountdownTick(timer, currentPhase);
             return;
         }
 
         if (currentPhase === GamePhase.KillerAppearing) {
-            this.setBoardMessage('杀手出现');
+            this.setBoardMessage(t('杀手出现'));
         }
     }
 
@@ -206,5 +223,10 @@ export class UiHeadbar extends Component {
         const balance = Number(value);
         this.stoneBalance = Number.isFinite(balance) ? balance : 0;
         this.labelStone.string = formatAmount(this.stoneBalance);
+    }
+
+    private setWaterBalance(value?: number | string) {
+        if (!this.labelWater) return;
+        this.labelWater.string = formatAmount(value);
     }
 }

@@ -1,4 +1,5 @@
 import { Vec2 } from 'cc';
+import { t } from '../Config/I18n';
 
 // TODO: 在编辑器中量出精确值
 export const VERT_X = 170;
@@ -20,7 +21,11 @@ export const ROOM_NAME_MAP = [
 ];
 
 export function getRoomNameById(roomId: number): string {
-    return ROOM_NAME_MAP[roomId] ?? `房间${roomId}`;
+    const roomName = ROOM_NAME_MAP[roomId];
+    if (roomName) {
+        return t(roomName);
+    }
+    return t('房间{roomId}', { roomId });
 }
 
 export interface RoomInfo {

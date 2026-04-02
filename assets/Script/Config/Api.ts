@@ -11,6 +11,44 @@ interface BattleInitData {
     user_id: number;
 }
 
+interface UserMyData {
+    balance_spring_water?: string | number;
+}
+
+export interface BalanceLogItem {
+    amount?: string | number;
+    change_amount?: string | number;
+    value?: string | number;
+    num?: string | number;
+    is_inc?: number | string;
+    remark?: string;
+    note?: string;
+    title?: string;
+    content?: string;
+    desc?: string;
+    created_at?: string;
+    create_time?: string;
+    time?: string;
+    updated_at?: string;
+    [key: string]: any;
+}
+
+export interface BalanceLogResponse {
+    total?: number | string;
+    list?: BalanceLogItem[];
+    logs?: BalanceLogItem[];
+    items?: BalanceLogItem[];
+    data?: BalanceLogItem[] | {
+        total?: number | string;
+        list?: BalanceLogItem[];
+        logs?: BalanceLogItem[];
+        items?: BalanceLogItem[];
+        asset_logs?: BalanceLogItem[];
+    };
+    asset_logs?: BalanceLogItem[];
+    [key: string]: any;
+}
+
 interface KillRecord {
     room_id: number;
     count: number;
@@ -44,7 +82,7 @@ interface BattleRecordData {
 interface RankItem {
     rank: number;
     user_id: number;
-    memail: string;
+    mphone: string;
     total_amount: number;
 }
 
@@ -57,6 +95,24 @@ interface BattleRankData {
 
 export class Api {
     // ---- 大逃杀模块 /api/battle ----
+
+    /** GET /api/user/my 用户资产信息 */
+    static userMy(): Promise<UserMyData> {
+        return http.get<UserMyData>('/api/users/my');
+    }
+
+    /** GET /api/users/my/balance_logs 用户资产明细 */
+    static userBalanceLogs(params: {
+        ccy?: 'balance_spring_water';
+        page_no?: number;
+        page_size?: number;
+    } = {}): Promise<BalanceLogResponse> {
+        return http.get<BalanceLogResponse>('/api/users/my/balance_logs', {
+            ccy: 'balance_spring_water',
+            page_no: params.page_no ?? 1,
+            page_size: params.page_size ?? 20,
+        });
+    }
 
     /** GET /api/battle/initGame 初始化游戏 */
     static battleInit(): Promise<BattleInitData> {

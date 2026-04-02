@@ -1,6 +1,7 @@
 import { Request } from './Request';
 import { Socket } from './Socket';
 import { Storage } from './Storage';
+import { I18n } from '../Config/I18n';
 
 interface AppParams {
     apiUrl: string;
@@ -18,6 +19,7 @@ export class AppBridge {
         const cachedToken = Storage.getString(this.TOKEN_STORAGE_KEY, '');
         params.token = cachedToken || params.token;
         this._params = params;
+        I18n.init(params.lang);
 
         console.log('[AppBridge] 获取到的参数:', params);
 

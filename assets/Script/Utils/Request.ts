@@ -1,4 +1,5 @@
 import { Toast } from '../Common/Toast';
+import { t } from '../Config/I18n';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -129,14 +130,14 @@ export class Request {
                 return result;
             }
             case 401: {
-                const errorMessage = this._pickErrorMessage(responseData, '登录已失效');
+                const errorMessage = this._pickErrorMessage(responseData, t('登录已失效'));
                 // TODO: 登录失效处理
                 console.warn(`[Request] 登录已失效: ${method} ${fullURL}`);
                 Toast.showFail(errorMessage);
                 return Promise.reject(new HttpError(response.status, errorMessage, responseData));
             }
             case 400: {
-                const errorMessage = this._pickErrorMessage(responseData, '请求参数错误');
+                const errorMessage = this._pickErrorMessage(responseData, t('请求参数错误'));
                 console.error(
                     `[Request] 请求失败: ${method} ${fullURL} status=${response.status}`,
                     responseData,
@@ -145,7 +146,10 @@ export class Request {
                 return Promise.reject(new HttpError(response.status, errorMessage, responseData));
             }
             default: {
-                const errorMessage = this._pickErrorMessage(responseData, `请求失败 (${response.status})`);
+                const errorMessage = this._pickErrorMessage(
+                    responseData,
+                    t('请求失败 ({status})', { status: response.status }),
+                );
                 console.error(
                     `[Request] 请求失败: ${method} ${fullURL} status=${response.status}`,
                     responseData,
@@ -159,7 +163,7 @@ export class Request {
 
             if (err.name === 'AbortError') {
                 console.error(`[Request] 请求超时: ${method} ${fullURL}`);
-                return Promise.reject(new Error(`请求超时 (${timeout}ms)`));
+                return Promise.reject(new Error(t('请求超时 ({timeout}ms)', { timeout })));
             }
 
             console.error(`[Request] 请求失败: ${method} ${fullURL}`, err);

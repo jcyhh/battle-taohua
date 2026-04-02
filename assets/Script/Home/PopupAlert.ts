@@ -1,5 +1,6 @@
 import { _decorator, Component, director, Label, Node, RichText } from 'cc';
 import { Popup } from '../Common/Popup';
+import { t } from '../Config/I18n';
 import { AudioManager } from '../Manager/AudioManager';
 import { formatAmount } from '../Utils/Format';
 const { ccclass, property } = _decorator;
@@ -44,8 +45,11 @@ export class PopupAlert extends Component {
         this.bindNodes();
         if (!this.titleRichText || !this.detailLabel) return;
 
-        this.titleRichText.string = `<b>杀手攻击了<color=#FFCC00>${roomName}</color></b>`;
-        this.detailLabel.string = `本期投入${formatAmount(userAmount)}灵石，获得${formatAmount(userBonus)}灵石`;
+        this.titleRichText.string = t('<b>杀手攻击了<color=#FFCC00>{roomName}</color></b>', { roomName });
+        this.detailLabel.string = t('本期投入{userAmount}灵石，获得{userBonus}灵石', {
+            userAmount: formatAmount(userAmount),
+            userBonus: formatAmount(userBonus),
+        });
         this.popup?.open();
         AudioManager.instance?.playSettlement();
     }

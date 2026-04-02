@@ -1,6 +1,7 @@
 import { _decorator, Component, Node, Label, Button, Prefab, Sprite, tween, Vec3, instantiate } from 'cc';
 import { Api } from '../Config/Api';
 import { Toast } from '../Common/Toast';
+import { t } from '../Config/I18n';
 import { AudioManager } from '../Manager/AudioManager';
 import { GameStateManager } from '../Manager/GameStateManager';
 import { MapRoot } from './MapRoot';
@@ -128,13 +129,13 @@ export class Picker extends Component {
     public async submitBet() {
         const roomId = MapRoot.instance?.getSelfSelectedRoomId() ?? 0;
         if (roomId < 1 || roomId > 8) {
-            Toast.showFail('请先选择房间');
+            Toast.showFail(t('请先选择房间'));
             return;
         }
 
         const gameId = GameStateManager.instance.currentGameId;
         if (!gameId) {
-            Toast.showFail('未获取到当前期数');
+            Toast.showFail(t('未获取到当前期数'));
             return;
         }
 
@@ -145,7 +146,7 @@ export class Picker extends Component {
                 amount: this.selectedValue,
             });
             AudioManager.instance?.playCoinOnce();
-            Toast.showSuccess('投入成功');
+            Toast.showSuccess(t('投入成功'));
             UiHeadbar.instance?.decreaseStoneBalance(this.selectedValue);
         } catch (e) {
             console.error('[Picker] 投入失败:', e);

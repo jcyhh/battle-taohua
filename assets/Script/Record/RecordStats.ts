@@ -1,5 +1,6 @@
 import { _decorator, Color, Component, director, instantiate, Label, Node, Prefab, ScrollView } from 'cc';
 import { Api } from '../Config/Api';
+import { t } from '../Config/I18n';
 import { getRoomNameById } from '../Home/RoomConfig';
 import { AppBridge } from '../Utils/AppBridge';
 import { formatAmount } from '../Utils/Format';
@@ -200,7 +201,8 @@ export class RecordStats extends Component {
     }
 
     private getRecordStatusText(item: RecordListItem): string {
-        return RECORD_STATUS_MAP[Number(item.state)] ?? '';
+        const key = RECORD_STATUS_MAP[Number(item.state)] ?? '';
+        return key ? t(key) : '';
     }
 
     private setLabelString(root: Node, path: string, value: string) {

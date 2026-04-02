@@ -5,14 +5,14 @@ const { ccclass, property } = _decorator;
 
 type MyRankData = {
     rank?: number;
-    memail?: string;
+    mphone?: string;
     total_amount?: number | string;
 };
 
 type RankItem = {
     rank?: number;
     user_id?: number;
-    memail?: string;
+    mphone?: string;
     total_amount?: number | string;
 };
 
@@ -109,7 +109,7 @@ export class RankList extends Component {
             rankingLabel.string = Number.isFinite(rankValue) && rankValue > 0 ? String(rankValue) : '--';
         }
         if (nameLabel) {
-            nameLabel.string = myRank?.memail || '';
+            nameLabel.string = myRank?.mphone || '';
         }
         if (amountLabel) {
             amountLabel.string = myRank?.total_amount !== undefined ? String(myRank.total_amount) : '0';
@@ -139,7 +139,7 @@ export class RankList extends Component {
         const countLabel = itemNode.getChildByPath('amount/count')?.getComponent(Label) ?? null;
 
         if (nameLabel) {
-            nameLabel.string = item.memail || '';
+            nameLabel.string = item.mphone || '';
         }
 
         if (countLabel) {
@@ -157,7 +157,7 @@ export class RankList extends Component {
             const rank = this.normalizeRank(item?.rank, i + 1);
 
             this.applyRankStyle(itemNode, rank);
-            this.setLabel(itemNode, 'name', item?.memail || '');
+            this.setLabel(itemNode, 'name', item?.mphone || '');
             this.setLabel(itemNode, 'amount', item?.total_amount !== undefined ? String(item.total_amount) : '0');
 
             this.listContentNode.addChild(itemNode);
