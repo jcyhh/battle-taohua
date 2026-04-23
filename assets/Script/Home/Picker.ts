@@ -1,9 +1,9 @@
-import { _decorator, Component, Node, Label, Button, Prefab, Sprite, tween, Vec3, instantiate } from 'cc';
+import { _decorator, Component, Node, Label, Button, Prefab, Sprite, tween, Tween, Vec3, instantiate, EventTouch } from 'cc';
 import { Api } from '../Config/Api';
 import { Toast } from '../Common/Toast';
 import { t } from '../Config/I18n';
 import { AudioManager } from '../Manager/AudioManager';
-import { GameStateManager } from '../Manager/GameStateManager';
+import { GamePhase, GameStateManager } from '../Manager/GameStateManager';
 import { MapRoot } from './MapRoot';
 import { UiHeadbar } from './UiHeadbar';
 import { formatAmount } from '../Utils/Format';
@@ -27,7 +27,12 @@ export class Picker extends Component {
 
     private selectedValue = 10;
     private isPopOpen = false;
+    private isPopAnimating = false;
+    private isSubmitting = false;
     private tabValues: number[] = [...DEFAULT_TAB_VALUES];
+    private readonly delayedClosePop = () => {
+        this.closePop();
+    };
 
     onLoad() {
         this.countLabel.string = formatAmount(this.selectedValue);
@@ -39,7 +44,14 @@ export class Picker extends Component {
     }
 
     onDestroy() {
-        this.node.off(Node.EventType.TOUCH_END, this.togglePop, this);
+        this.unschedule(this.delayedClosePop);
+        if (this.pickerPop?.isValid) {
+            Tween.stopAllByTarget(this.pickerPop);
+            this.pickerPop.targetOff(this);
+        }
+        if (this.node?.isValid) {
+            this.node.off(Node.EventType.TOUCH_END, this.togglePop, this);
+        }
     }
 
     private async initTabs() {
@@ -65,12 +77,14 @@ export class Picker extends Component {
     }
 
     private onTabClick(value: number) {
+        if (this.isSubmitting) return;
         if (value === this.selectedValue) return;
 
         this.selectedValue = value;
         this.updateTabStates();
         this.countLabel.string = formatAmount(value);
-        this.scheduleOnce(() => this.closePop(), 0.3);
+        this.unschedule(this.delayedClosePop);
+        this.scheduleOnce(this.delayedClosePop, 0.3);
     }
 
     private updateTabStates() {
@@ -98,7 +112,20 @@ export class Picker extends Component {
         }
     }
 
-    private togglePop() {
+    private togglePop(event?: EventTouch) {
+        if (this.isSubmitting || this.isPopAnimating) {
+            return;
+        }
+
+        if (event && this.pickerPop?.isValid && this.pickerPop.active && this.isNodeInsidePopup(event.target as Node | null)) {
+            return;
+        }
+
+        if (!this.canOpenPicker()) {
+            Toast.showFail(t('请稍等'));
+            return;
+        }
+
         if (this.isPopOpen) {
             this.closePop();
         } else {
@@ -107,26 +134,72 @@ export class Picker extends Component {
     }
 
     private openPop() {
-        if (this.isPopOpen) return;
+        if (!this.pickerPop?.isValid) return;
+        if (this.isPopOpen || this.isPopAnimating) return;
+        this.unschedule(this.delayedClosePop);
+        Tween.stopAllByTarget(this.pickerPop);
+        this.isPopAnimating = true;
         this.isPopOpen = true;
         this.pickerPop.active = true;
         this.pickerPop.setScale(1, 0, 1);
         tween(this.pickerPop)
             .to(0.15, { scale: new Vec3(1, 1.05, 1) })
             .to(0.08, { scale: new Vec3(1, 1, 1) })
+            .call(() => {
+                this.isPopAnimating = false;
+            })
             .start();
     }
 
     private closePop() {
-        if (!this.isPopOpen) return;
+        if (!this.pickerPop?.isValid) return;
+        if (!this.isPopOpen || this.isPopAnimating) return;
+        this.unschedule(this.delayedClosePop);
+        Tween.stopAllByTarget(this.pickerPop);
+        this.isPopAnimating = true;
         this.isPopOpen = false;
         tween(this.pickerPop)
             .to(0.15, { scale: new Vec3(1, 0, 1) })
-            .call(() => { this.pickerPop.active = false; })
+            .call(() => {
+                this.pickerPop.active = false;
+                this.isPopAnimating = false;
+            })
             .start();
     }
 
+    private forceClosePop() {
+        this.unschedule(this.delayedClosePop);
+        if (!this.pickerPop?.isValid) {
+            this.isPopAnimating = false;
+            this.isPopOpen = false;
+            return;
+        }
+        Tween.stopAllByTarget(this.pickerPop);
+        this.isPopAnimating = false;
+        this.isPopOpen = false;
+        this.pickerPop.active = false;
+        this.pickerPop.setScale(1, 0, 1);
+    }
+
+    private canOpenPicker() {
+        const phase = GameStateManager.instance.currentPhase;
+        return phase === GamePhase.Gathering || phase === GamePhase.Starting;
+    }
+
+    private isNodeInsidePopup(node: Node | null) {
+        let current = node;
+        while (current) {
+            if (current === this.pickerPop) {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
+    }
+
     public async submitBet() {
+        if (this.isSubmitting) return;
+
         const roomId = MapRoot.instance?.getSelfSelectedRoomId() ?? 0;
         if (roomId < 1 || roomId > 8) {
             Toast.showFail(t('请先选择房间'));
@@ -139,6 +212,9 @@ export class Picker extends Component {
             return;
         }
 
+        this.isSubmitting = true;
+        this.forceClosePop();
+
         try {
             await Api.battleJoin({
                 game_id: gameId,
@@ -150,6 +226,8 @@ export class Picker extends Component {
             UiHeadbar.instance?.decreaseStoneBalance(this.selectedValue);
         } catch (e) {
             console.error('[Picker] 投入失败:', e);
+        } finally {
+            this.isSubmitting = false;
         }
     }
 }

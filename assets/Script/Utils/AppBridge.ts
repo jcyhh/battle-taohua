@@ -7,6 +7,7 @@ interface AppParams {
     apiUrl: string;
     wsUrl: string;
     token: string;
+    lang: string;
     [key: string]: string;
 }
 
@@ -31,6 +32,10 @@ export class AppBridge {
 
         if (params.token) {
             Request.instance.token = params.token;
+        }
+
+        if (params.lang) {
+            Request.instance.lang = params.lang;
         }
 
         if (params.wsUrl) {
@@ -76,7 +81,7 @@ export class AppBridge {
     }
 
     private static _parseUrlParams(): AppParams {
-        const result: AppParams = { apiUrl: '', wsUrl: '', token: '' };
+        const result: AppParams = { apiUrl: '', wsUrl: '', token: '', lang: '' };
 
         try {
             const search = typeof window !== 'undefined' ? window.location.search : '';

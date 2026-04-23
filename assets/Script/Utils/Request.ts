@@ -30,6 +30,7 @@ export class Request {
     private _baseURL: string = '';
     private _timeout: number = 15000;
     private _token: string = '';
+    private _lang: string = '';
     private _defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
     };
@@ -57,6 +58,14 @@ export class Request {
 
     get token(): string {
         return this._token;
+    }
+
+    set lang(value: string) {
+        this._lang = value;
+    }
+
+    get lang(): string {
+        return this._lang;
     }
 
     setHeader(key: string, value: string): void {
@@ -95,6 +104,9 @@ export class Request {
         const headers: Record<string, string> = { ...this._defaultHeaders, ...options?.headers };
         if (this._token && !options?.noAuth) {
             headers['Authorization'] = `Bearer ${this._token}`;
+        }
+        if (this._lang) {
+            headers.lang = this._lang;
         }
 
         let init: RequestInit = {
