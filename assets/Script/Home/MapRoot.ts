@@ -3,6 +3,7 @@ import { buildPath, getRoomNameById, LOWER_Y, MOVE_SPEED, ROOMS, ROOM_KEYS, UPPE
 import { Character, CharacterRoleType } from './Character';
 import { GemBurst } from './GemBurst';
 import { PopupAlert } from './PopupAlert';
+import { PopupUnstart } from './PopupUnstart';
 import { RoomAsset } from './RoomAsset';
 import { Api } from '../Config/Api';
 import { AppBridge } from '../Utils/AppBridge';
@@ -81,6 +82,7 @@ export class MapRoot extends Component {
         this.snapCharactersForFinalCountdown(payload.dtsData.user_list, payload.currentPhase, payload.dtsData.timer);
     };
     private readonly onPhaseChanged = (payload: {
+        previousPhase: GamePhase;
         currentPhase: GamePhase;
         dtsData: {
             room_list?: SocketRoomInfo[];
@@ -89,6 +91,10 @@ export class MapRoot extends Component {
             killer_room?: number | string;
         };
     }) => {
+        if (this.shouldShowUnstartPopup(payload.previousPhase, payload.currentPhase)) {
+            PopupUnstart.open();
+        }
+
         if (GameStateManager.instance.skipCurrentRoundVisuals) return;
         if (payload.currentPhase !== GamePhase.KillerAppearing) return;
 
@@ -100,6 +106,11 @@ export class MapRoot extends Component {
             this.startKillerAttack(killerRoom);
         }
     };
+
+    private shouldShowUnstartPopup(previousPhase: GamePhase, currentPhase: GamePhase): boolean {
+        if (previousPhase !== GamePhase.Unknown) return false;
+        return currentPhase === GamePhase.KillerAppearing || currentPhase === GamePhase.Settlement;
+    }
 
     onLoad() {
         MapRoot.instance = this;
@@ -127,6 +138,11 @@ export class MapRoot extends Component {
         GameStateManager.instance.onGameChanged(this.onGameChanged);
         GameStateManager.instance.onDtsDataChanged(this.onDtsDataChanged);
         GameStateManager.instance.onPhaseChanged(this.onPhaseChanged);
+
+        const initialPhase = GameStateManager.instance.currentPhase;
+        if (initialPhase === GamePhase.KillerAppearing || initialPhase === GamePhase.Settlement) {
+            PopupUnstart.open();
+        }
     }
 
     onDestroy() {
@@ -565,6 +581,7 @@ export class MapRoot extends Component {
         this.killerTargetRoom = null;
         this.suppressSelfRoomSyncAfterReset = true;
         PopupAlert.close();
+        PopupUnstart.close();
 
         for (const child of [...this.node.children]) {
             if (child.name.startsWith('gem_')) {

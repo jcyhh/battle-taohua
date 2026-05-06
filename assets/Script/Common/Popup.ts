@@ -85,10 +85,12 @@ export class Popup extends Component {
         }, this.openDelay);
     }
 
-    close() {
+    close(options?: { silent?: boolean }) {
         if (!this.content) return;
 
-        AudioManager.instance?.playClick();
+        if (!options?.silent) {
+            AudioManager.instance?.playClick();
+        }
 
         if (this.isOpenScheduled) {
             this.finishCloseImmediately();
