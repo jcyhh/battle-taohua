@@ -37,7 +37,7 @@ export class PopupUnstart extends Component {
     }
 
     closePopup() {
-        if (!this.node?.isValid || !this.node.active) return;
+        if (!this.node?.isValid) return;
         this.popup = this.popup ?? this.getComponent(Popup);
         this.popup?.close({ silent: true });
     }

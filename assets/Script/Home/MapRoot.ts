@@ -77,6 +77,7 @@ export class MapRoot extends Component {
         currentPhase: GamePhase;
     }) => {
         if (!this.canChooseRoomByPhase(payload.currentPhase)) return;
+        PopupUnstart.close();
         this.updateRoomAssetAmounts(payload.dtsData.room_list);
         this.syncSocketPlayers(payload.dtsData.user_list, payload.dtsData.user_id);
         this.snapCharactersForFinalCountdown(payload.dtsData.user_list, payload.currentPhase, payload.dtsData.timer);
@@ -93,6 +94,8 @@ export class MapRoot extends Component {
     }) => {
         if (this.shouldShowUnstartPopup(payload.previousPhase, payload.currentPhase)) {
             PopupUnstart.open();
+        } else if (payload.currentPhase !== GamePhase.KillerAppearing) {
+            PopupUnstart.close();
         }
 
         if (GameStateManager.instance.skipCurrentRoundVisuals) return;
@@ -109,7 +112,7 @@ export class MapRoot extends Component {
 
     private shouldShowUnstartPopup(previousPhase: GamePhase, currentPhase: GamePhase): boolean {
         if (previousPhase !== GamePhase.Unknown) return false;
-        return currentPhase === GamePhase.KillerAppearing || currentPhase === GamePhase.Settlement;
+        return currentPhase === GamePhase.KillerAppearing;
     }
 
     onLoad() {
@@ -140,7 +143,7 @@ export class MapRoot extends Component {
         GameStateManager.instance.onPhaseChanged(this.onPhaseChanged);
 
         const initialPhase = GameStateManager.instance.currentPhase;
-        if (initialPhase === GamePhase.KillerAppearing || initialPhase === GamePhase.Settlement) {
+        if (initialPhase === GamePhase.KillerAppearing) {
             PopupUnstart.open();
         }
     }

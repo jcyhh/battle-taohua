@@ -92,7 +92,7 @@ export class Popup extends Component {
             AudioManager.instance?.playClick();
         }
 
-        if (this.isOpenScheduled) {
+        if (this.isOpenScheduled || !this.node.active) {
             this.finishCloseImmediately();
             return;
         }
