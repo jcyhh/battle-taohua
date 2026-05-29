@@ -1,6 +1,4 @@
 import { _decorator, Component, Node, tween, Vec3 } from 'cc';
-import { AudioManager } from '../Manager/AudioManager';
-
 const { ccclass, property } = _decorator;
 
 @ccclass('Popup')
@@ -87,10 +85,6 @@ export class Popup extends Component {
 
     close(options?: { silent?: boolean }) {
         if (!this.content) return;
-
-        if (!options?.silent) {
-            AudioManager.instance?.playClick();
-        }
 
         if (this.isOpenScheduled || !this.node.active) {
             this.finishCloseImmediately();

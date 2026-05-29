@@ -9,11 +9,9 @@ const SFX_KEY = 'sfxOn';
 const AUDIO_PATHS = {
     bgm: 'Audio/bgm',
     click: 'Audio/play',
-    countdown: 'Audio/countdown',
-    attack: 'Audio/attack',
-    roomSelect: 'Audio/chooseRoom',
     coin: 'Audio/gold',
-    settlement: 'Audio/win',
+    work: 'Audio/work',
+    drink: 'Audio/drink',
 } as const;
 
 @ccclass('AudioManager')
@@ -25,11 +23,9 @@ export class AudioManager extends Component {
     private sfxSource: AudioSource | null = null;
     private bgmClip: AudioClip | null = null;
     private clickClip: AudioClip | null = null;
-    private countdownClip: AudioClip | null = null;
-    private attackClip: AudioClip | null = null;
-    private roomSelectClip: AudioClip | null = null;
     private coinClip: AudioClip | null = null;
-    private settlementClip: AudioClip | null = null;
+    private workClip: AudioClip | null = null;
+    private drinkClip: AudioClip | null = null;
     private preloadPromise: Promise<void> | null = null;
 
     private static _instance: AudioManager | null = null;
@@ -70,11 +66,9 @@ export class AudioManager extends Component {
         this.preloadPromise = Promise.all([
             this.loadClip(AUDIO_PATHS.bgm).then((clip) => { this.bgmClip = clip; }),
             this.loadClip(AUDIO_PATHS.click).then((clip) => { this.clickClip = clip; }),
-            this.loadClip(AUDIO_PATHS.countdown).then((clip) => { this.countdownClip = clip; }),
-            this.loadClip(AUDIO_PATHS.attack).then((clip) => { this.attackClip = clip; }),
-            this.loadClip(AUDIO_PATHS.roomSelect).then((clip) => { this.roomSelectClip = clip; }),
             this.loadClip(AUDIO_PATHS.coin).then((clip) => { this.coinClip = clip; }),
-            this.loadClip(AUDIO_PATHS.settlement).then((clip) => { this.settlementClip = clip; }),
+            this.loadClip(AUDIO_PATHS.work).then((clip) => { this.workClip = clip; }),
+            this.loadClip(AUDIO_PATHS.drink).then((clip) => { this.drinkClip = clip; }),
         ]).then(() => {
             if (this.bgmSource && this.bgmClip) {
                 this.bgmSource.clip = this.bgmClip;
@@ -92,15 +86,12 @@ export class AudioManager extends Component {
     }
 
     playCountdownTick() {
-        this.playSfx(this.countdownClip);
     }
 
     playAttack() {
-        this.playSfxTimes(this.attackClip, 2);
     }
 
     playRoomSelect() {
-        this.playSfx(this.roomSelectClip);
     }
 
     playCoinOnce() {
@@ -111,8 +102,16 @@ export class AudioManager extends Component {
         this.playSfxBurst(this.coinClip, 3, 0.12);
     }
 
+    playWorkOnce(): number {
+        this.playSfx(this.workClip);
+        return this.workClip ? this.getClipDuration(this.workClip) : 0.25;
+    }
+
+    playDrinkOnce() {
+        this.playSfx(this.drinkClip);
+    }
+
     playSettlement() {
-        this.playSfx(this.settlementClip);
     }
 
     playSfx(clip: AudioClip | null) {

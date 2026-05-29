@@ -1,5 +1,3 @@
-import { GameStateManager, GameDtsData } from '../Manager/GameStateManager';
-
 type MessageHandler = (data: any) => void;
 
 interface SocketOptions {
@@ -45,7 +43,6 @@ export class Socket {
     }
 
     setCurrentGameId(gameId: number | string | null | undefined): void {
-        GameStateManager.instance.setInitialGameId(gameId);
     }
 
     connect(options: SocketOptions): void {
@@ -83,10 +80,6 @@ export class Socket {
             }
 
             if (data?.type === 'pong') return;
-
-            if (data && typeof data === 'object' && data.dts_data) {
-                this._handleDtsData(data.dts_data as GameDtsData, data);
-            }
 
             if (data?.type) {
                 this._emit(data.type, data);
@@ -216,20 +209,6 @@ export class Socket {
             clearTimeout(this._reconnectTimer);
             this._reconnectTimer = null;
         }
-    }
-
-    private _handleDtsData(dtsData: GameDtsData, rawData: any): void {
-        const syncResult = GameStateManager.instance.syncFromDtsData(dtsData);
-        if (syncResult.gameChanged && syncResult.currentGameId !== null) {
-            this._emit('game_changed', {
-                previousGameId: syncResult.previousGameId,
-                currentGameId: syncResult.currentGameId,
-                dtsData,
-                rawData,
-            });
-        }
-
-        this._emit('dts_data', dtsData);
     }
 
     private _buildUrl(url: string, token?: string): string {
