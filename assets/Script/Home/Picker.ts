@@ -9,7 +9,7 @@ import { UiHeadbar } from './UiHeadbar';
 import { formatAmount } from '../Utils/Format';
 const { ccclass, property } = _decorator;
 
-const DEFAULT_TAB_VALUES = [10, 30, 50, 100, 200, 500, 1000, 10000];
+const DEFAULT_TAB_VALUES = [1, 10, 50, 100, 200, 500];
 
 @ccclass('Picker')
 export class Picker extends Component {
