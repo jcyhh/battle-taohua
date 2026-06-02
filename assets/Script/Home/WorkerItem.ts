@@ -11,6 +11,9 @@ const { ccclass, property } = _decorator;
 @ccclass('WorkerItem')
 export class WorkerItem extends Component {
     @property(Label)
+    nameLabel: Label = null!;
+
+    @property(Label)
     priceLabel: Label = null!;
 
     @property(Label)
@@ -26,6 +29,7 @@ export class WorkerItem extends Component {
 
     onLoad() {
         this.isDestroyed = false;
+        this.nameLabel = this.nameLabel ?? this.findTitleLabel();
     }
 
     onDestroy() {
@@ -33,10 +37,16 @@ export class WorkerItem extends Component {
         this.unscheduleAllCallbacks();
     }
 
-    renderShopInfo(minerId: number, cycle: number | string, price: number | string) {
+    renderShopInfo(minerId: number, name: string | undefined, cycle: number | string, price: number | string) {
         this.minerId = minerId;
         this.unitPrice = Number(price) || 0;
         this.count = 1;
+
+        const titleLabel = this.nameLabel ?? this.findTitleLabel();
+        if (titleLabel) {
+            titleLabel.string = name ? t(name) : t(this.getDefaultMinerName(minerId));
+            this.nameLabel = titleLabel;
+        }
 
         if (this.daysLabel) {
             this.daysLabel.string = t('工作周期: {cycle}天', { cycle });
@@ -86,6 +96,33 @@ export class WorkerItem extends Component {
         if (this.countLabel) {
             this.countLabel.string = String(this.count);
         }
+    }
+
+    private getDefaultMinerName(minerId: number): string {
+        switch (minerId) {
+        case 1:
+            return '白银矿工';
+        case 2:
+            return '黄金矿工';
+        case 3:
+            return '铂金矿工';
+        case 4:
+            return '钻石矿工';
+        case 5:
+            return '荣耀矿工';
+        case 6:
+            return '王者矿工';
+        default:
+            return '矿工';
+        }
+    }
+
+    private findTitleLabel(): Label | null {
+        const labels = this.node.getComponentsInChildren(Label)
+            .filter((label) => label !== this.priceLabel && label !== this.countLabel && label !== this.daysLabel);
+        if (labels.length === 0) return null;
+
+        return labels.sort((a, b) => b.node.worldPosition.y - a.node.worldPosition.y)[0];
     }
 
     start() {

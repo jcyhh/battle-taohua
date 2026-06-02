@@ -1,5 +1,5 @@
 import { _decorator, Button, Component, director, Event, Label, Node, Tween, tween, Vec3 } from 'cc';
-import { Api, MineWorkItem } from '../Config/Api';
+import { Api, MineWorkItem, MinerShopItem } from '../Config/Api';
 import { AudioManager } from '../Manager/AudioManager';
 import { formatAmount } from '../Utils/Format';
 import { PlantItem } from './PlantItem';
@@ -196,19 +196,19 @@ export class Content extends Component {
             const data = await Api.minerList();
             if (this.isDestroyed || !this.node?.isValid) return;
             for (const item of data.list) {
-                this.renderWorkerShopItem(item.miner_id, item.cycle, item.price);
+                this.renderWorkerShopItem(item);
             }
         } catch (error) {
             console.error('[Content] 获取矿工商店列表失败:', error);
         }
     }
 
-    private renderWorkerShopItem(minerId: number, cycle: number | string, price: number | string) {
-        const itemNode = this.workerListContentNode?.getChildByName(`workerItem${minerId}`);
+    private renderWorkerShopItem(item: MinerShopItem) {
+        const itemNode = this.workerListContentNode?.getChildByName(`workerItem${item.miner_id}`);
         const workerItem = itemNode?.getComponent(WorkerItem);
         if (!workerItem) return;
 
-        workerItem.renderShopInfo(minerId, cycle, price);
+        workerItem.renderShopInfo(item.miner_id, item.name, item.cycle, item.price);
     }
 
     private preloadRecordScene() {

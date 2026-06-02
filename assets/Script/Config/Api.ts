@@ -14,6 +14,13 @@ interface BattleInitData {
 interface UserMyData {
     balance_spring_water?: string | number;
     balance_xz?: string | number;
+    balance_fairy_stone?: string | number;
+}
+
+export interface FlashSwapConfigResponse {
+    xz_fee_rate: string | number;
+    fee_rate: string | number;
+    xz_price: string | number;
 }
 
 export interface MinerMyItem {
@@ -156,6 +163,16 @@ export class Api {
     /** GET /api/user/my 用户资产信息 */
     static userMy(): Promise<UserMyData> {
         return http.get<UserMyData>('/api/users/my');
+    }
+
+    /** GET /api/flash_swap/config 闪兑配置 */
+    static flashSwapConfig(): Promise<FlashSwapConfigResponse> {
+        return http.get<FlashSwapConfigResponse>('/api/flash_swap/config');
+    }
+
+    /** POST /api/flash_swap/swap_xz 兑换行者币 */
+    static flashSwapXz(data: { amount: number }): Promise<Record<string, never>> {
+        return http.post<Record<string, never>>('/api/flash_swap/swap_xz', data);
     }
 
     /** GET /api/miner/my 用户持有矿工列表 */
