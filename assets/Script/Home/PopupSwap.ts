@@ -22,7 +22,6 @@ export class PopupSwap extends Component {
     @property(EditBox)
     inputEditBox: EditBox = null!;
 
-    private xzFeeRate = 0;
     private xzPrice = 0;
     private requestVersion = 0;
     private isDestroyed = false;
@@ -62,11 +61,10 @@ export class PopupSwap extends Component {
                 return;
             }
 
-            this.xzFeeRate = this.toNumber(config.xz_fee_rate);
             this.xzPrice = this.toNumber(config.xz_price);
             if (this.feeLabel) {
                 this.feeLabel.string = t('滑点 : {feeRate}%', {
-                    feeRate: formatAmount(config.fee_rate),
+                    feeRate: formatAmount(config.xz_fee_rate),
                 });
             }
             this.updateAmountLabel();
